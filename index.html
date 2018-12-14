@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Train App</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
+        crossorigin="anonymous">
+</head>
+
+<body>
+    <div class="container">
+        <div class="jumbotron">
+            <h1 class="text-center">Time for Trains!</h1>
+        </div>
+    </div>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">Current Train Schedule</div>
+            <div id="schedulearea" class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Train Name</th>
+                            <th scope="col">Destination</th>
+                            <th scope="col">Frequency (min)</th>
+                            <th scope="col">Next Arrival</th>
+                            <th scope="col">Minutes Away</th>
+                        </tr>
+                    </thead>
+                    <tbody id="maintablebody">
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <br>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">Add a train</div>
+            <div class="card-body">
+                <form>
+                    <div class="form-group">
+                        <label for="trainName">Train Name</label>
+                        <input type="text" class="form-control" id="trainName" aria-describedby="trainName">
+                    </div>
+                    <div class="form-group">
+                        <label for="destination">Destination</label>
+                        <input type="text" class="form-control" id="destination" aria-describedby="destination">
+                    </div>
+                    <div class="form-group">
+                        <label for="trainTime">First Train Time (HH:mm - military time)</label>
+                        <input type="text" class="form-control" id="trainTime" aria-describedby="trainTime">
+                    </div>
+                    <div class="form-group">
+                        <label for="frequency">Frequency (min)</label>
+                        <input type="text" class="form-control" id="frequency" aria-describedby="frequency">
+                    </div>
+                    <button type="submit" id="submitbutton" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/5.7.0/firebase.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy"
+        crossorigin="anonymous"></script>
+    <script>
+
+        function calculateNextArrival(firstTrainTime, frequency) {
+            var currentime = moment()
+            var FirstTrainFormatted = moment(firstTrainTime, 'HH:mm').format('X');
+            var timedifference = currentime.diff(moment.unix(FirstTrainFormatted), "minutes");
+            var timeLeft = timedifference % frequency;
+            var mins = moment(frequency - timeLeft, "mm").format('mm');
+            var nextTrain = currentime.add(mins, "m").format("hh:mm A");
+            return nextTrain
+        }
+        function calculateMinutesAway(firstTrainTime, frequency) {
+            var currentime = moment()
+            var FirstTrainFormatted = moment(firstTrainTime, 'HH:mm').format('X');
+            var timedifference = currentime.diff(moment.unix(FirstTrainFormatted), "minutes");
+            var timeLeft = timedifference % frequency;
+            var mins = moment(frequency - timeLeft, "mm").format('mm');
+            return mins
+        }
+        var config = {
+            apiKey: "AIzaSyDD-mpd2h8sQ1MqX5wgcGv59NWWuJYTDjg",
+            authDomain: "trainactivity-e95bb.firebaseapp.com",
+            databaseURL: "https://trainactivity-e95bb.firebaseio.com",
+            projectId: "trainactivity-e95bb",
+            storageBucket: "trainactivity-e95bb.appspot.com",
+            messagingSenderId: "775383903906"
+        };
+        firebase.initializeApp(config);
+        var database = firebase.database();
+
+        $("#submitbutton").on("click", function (event) {
+            var valueOfTrain = $("#trainName").val();
+            var valueOfDestination = $("#destination").val();
+            var valueOftime = $("#trainTime").val();
+            var valueOfFrequency = $("#frequency").val();
+            if (isNaN(valueOfFrequency)) {
+                alert("Invalid frequency input")
+            }
+            else {
+                database.ref().push({
+                trainName: valueOfTrain,
+                trainDestination: valueOfDestination,
+                trainTime: valueOftime,
+                trainFrequency: valueOfFrequency,
+            });
+
+
+            }
+
+
+        });
+        database.ref().on("child_added", function (snapshot) {
+            var trainNamec = snapshot.val().trainName;
+            var trainDestinationc = snapshot.val().trainDestination;
+            var trainTimec = snapshot.val().trainTime;
+            var trainFrequencyc = snapshot.val().trainFrequency;
+            var nextArrival = calculateNextArrival(trainTimec, trainFrequencyc)
+            var timeAway = calculateMinutesAway(trainTimec, trainFrequencyc)
+            $("#maintablebody").append("<tr><td>" + trainNamec + "</td><td>" + trainDestinationc + "</td><td>" + trainFrequencyc + "</td><td>" + nextArrival + "</td><td>" + timeAway + "</td></tr>")
+            // Handle the errors
+        }, function (errorObject) {
+            console.log("Errors handled: " + errorObject.code);
+        });
+
+    </script>
+</body>
+
+</html>
